@@ -1,26 +1,30 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="dark">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>CodeCollab - Collaborative Code Editor</title>
-    <meta name="description" content="Real-time collaborative code editor for teams. Code together, build together." />
-    <meta name="author" content="CodeCollab" />
+    <title>CodeAdda — Real-Time Collaborative Code Editor</title>
+    <meta name="description" content="A VS Code-inspired collaborative code editor with live cursors, AI assistance, multi-language execution, interview mode, and real-time presence — all in your browser." />
+    <meta name="author" content="CodeAdda" />
+    <meta name="theme-color" content="#0D0D1A" />
+
+    <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Fira+Code:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Fira+Code:wght@300;400;500;600&display=swap" rel="stylesheet">
 
-    <meta property="og:title" content="CodeCollab - Collaborative Code Editor" />
-    <meta property="og:description" content="Real-time collaborative code editor for teams. Code together, build together." />
+    <!-- OG Tags -->
+    <meta property="og:title" content="CodeAdda — Real-Time Collaborative Code Editor" />
+    <meta property="og:description" content="Code together in real-time with live cursors, AI assistant, multi-language execution, and interview mode." />
     <meta property="og:type" content="website" />
-    <meta property="og:image" content="https://lovable.dev/opengraph-image-p98pqg.png" />
 
-    <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:site" content="@lovable_dev" />
-    <meta name="twitter:image" content="https://lovable.dev/opengraph-image-p98pqg.png" />
+    <style>
+      /* Critical: prevent flash of white background */
+      html, body { background-color: #0D0D1A; margin: 0; padding: 0; }
+    </style>
   </head>
 
-  <body>
+  <body class="dark">
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>

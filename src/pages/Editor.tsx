@@ -1,162 +1,265 @@
-import { useState } from "react";
-import { useParams } from "react-router-dom";
-import { createClient } from "@supabase/supabase-js";
-import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { useTheme } from "@/contexts/ThemeContext";
-import { Code2, Copy, Save, Download, Sun, Moon, Play } from "lucide-react";
-import Editor from "@monaco-editor/react";
-import { createSubmission, getSubmission } from "../../compilerApi";
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { useParams } from 'react-router-dom';
+import { motion } from 'framer-motion';
+import MonacoEditor, { type OnMount } from '@monaco-editor/react';
+import type * as Monaco from 'monaco-editor';
 
-const supabase = createClient(
-  import.meta.env.VITE_SUPABASE_URL!,
-  import.meta.env.VITE_SUPABASE_ANON_KEY!
-);
+import { useEditorStore, LANGUAGES } from '@/store/useEditorStore';
+import { useCollaboration } from '@/hooks/useCollaboration';
+import { useCodeExecution } from '@/hooks/useCodeExecution';
+import { useVersionHistory } from '@/hooks/useVersionHistory';
+import {
+  apiGetRoom, apiGetChatHistory, apiGetSnapshots,
+  apiCheckHealth,
+} from '@/services/mongoApi';
 
-const languageMap: Record<number, string> = {
-  63: "javascript",
-  71: "python",
-  62: "java",
-  54: "cpp",
-};
+import { EditorNavbar } from '@/components/editor/EditorNavbar';
+import { LeftSidebar } from '@/components/editor/LeftSidebar';
+import { RightSidebar } from '@/components/editor/RightSidebar';
+import { OutputConsole } from '@/components/editor/OutputConsole';
+import { InterviewPanel } from '@/components/editor/InterviewPanel';
 
-const EditorPage = () => {
+const EditorPage: React.FC = () => {
   const { roomId } = useParams<{ roomId: string }>();
-  const { theme, toggleTheme } = useTheme();
+  const safeRoomId = roomId || 'default-room';
 
-  const [code, setCode] = useState("// Start coding...");
-  const [language, setLanguage] = useState<number>(63);
-  const [output, setOutput] = useState("");
-  const [running, setRunning] = useState(false);
-  const [stdin, setStdin] = useState("");
+  const {
+    code, setCode, setLanguage,
+    language, fontSize, minimap, wordWrap,
+    isRightSidebarOpen, setIsRightSidebarOpen,
+    addMessage, addSnapshot, myUser,
+  } = useEditorStore();
 
-  const runCode = async () => {
-    setRunning(true);
-    setOutput("Running...");
-    try {
-      const token = await createSubmission(code, language, stdin);
+  const editorRef = useRef<Monaco.editor.IStandaloneCodeEditor | null>(null);
+  const [isBackendOnline, setIsBackendOnline] = useState(false);
 
-      let result;
-      while (true) {
-        result = await getSubmission(token);
-        if (result.status?.id <= 2) await new Promise(res => setTimeout(res, 1000));
-        else break;
+  // Hooks
+  const { broadcastCode, sendChatMessage, sendTypingIndicator } = useCollaboration(safeRoomId, editorRef);
+  const { execute } = useCodeExecution();
+  const { createSnapshot } = useVersionHistory(safeRoomId);
+
+  // ── Load from MongoDB on mount ─────────────────────────────────
+  useEffect(() => {
+    let isMounted = true;
+
+    const initRoom = async () => {
+      // 1. Check backend health
+      const healthy = await apiCheckHealth();
+      if (isMounted) setIsBackendOnline(healthy);
+
+      if (!healthy) return; // graceful degradation
+
+      // 2. Load room code + language from MongoDB
+      const room = await apiGetRoom(safeRoomId);
+      if (room && isMounted && room.code) {
+        setCode(room.code);
+        const lang = LANGUAGES.find((l) => l.id === room.language);
+        if (lang) setLanguage(lang);
       }
 
-      let out = "";
-      if (result.stdout) out += result.stdout;
-      if (result.stderr) out += "\n" + result.stderr;
-      if (result.compile_output) out += "\n" + result.compile_output;
-      if (result.message) out += "\n" + result.message;
-      setOutput(out.trim() || "No output");
-    } catch (err) {
-      setOutput("Error while running code");
-      console.error(err);
-    }
-    setRunning(false);
+      // 3. Load chat history
+      const chatHistory = await apiGetChatHistory(safeRoomId);
+      if (isMounted) {
+        chatHistory.forEach((msg) =>
+          addMessage({
+            id: msg._id,
+            userId: msg.userId,
+            userName: msg.userName,
+            userColor: msg.userColor,
+            content: msg.content,
+            timestamp: new Date(msg.createdAt),
+          })
+        );
+      }
+
+      // 4. Load snapshots
+      const snaps = await apiGetSnapshots(safeRoomId);
+      if (isMounted) {
+        snaps.forEach((s) =>
+          addSnapshot({
+            id: s._id,
+            code: s.code,
+            language: s.language,
+            description: s.description,
+            timestamp: new Date(s.createdAt),
+          })
+        );
+      }
+    };
+
+    initRoom();
+    return () => { isMounted = false; };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [safeRoomId]);
+
+  // Monaco mount handler
+  const handleEditorMount: OnMount = (editor, monaco) => {
+    editorRef.current = editor;
+
+    // Define custom theme
+    monaco.editor.defineTheme('pcp-dark', {
+      base: 'vs-dark',
+      inherit: true,
+      rules: [
+        { token: 'comment', foreground: '4a5568', fontStyle: 'italic' },
+        { token: 'keyword', foreground: 'c084fc' },
+        { token: 'string', foreground: '86efac' },
+        { token: 'number', foreground: 'fbbf24' },
+        { token: 'type', foreground: '67e8f9' },
+        { token: 'function', foreground: '93c5fd' },
+        { token: 'variable', foreground: 'e2e8f0' },
+        { token: 'operator', foreground: 'f0abfc' },
+      ],
+      colors: {
+        'editor.background': '#080810',
+        'editor.foreground': '#e2e8f0',
+        'editor.lineHighlightBackground': '#ffffff08',
+        'editor.selectionBackground': '#7c3aed40',
+        'editor.inactiveSelectionBackground': '#7c3aed20',
+        'editorLineNumber.foreground': '#ffffff20',
+        'editorLineNumber.activeForeground': '#a855f7',
+        'editorCursor.foreground': '#a855f7',
+        'editorIndentGuide.background': '#ffffff08',
+        'editorIndentGuide.activeBackground': '#7c3aed40',
+        'editor.findMatchBackground': '#7c3aed50',
+        'editor.findMatchHighlightBackground': '#7c3aed25',
+        'editorSuggestWidget.background': '#0d0d1a',
+        'editorSuggestWidget.border': '#ffffff15',
+        'editorSuggestWidget.selectedBackground': '#7c3aed30',
+        'editorWidget.background': '#0d0d1a',
+        'editorWidget.border': '#ffffff15',
+        'scrollbarSlider.background': '#ffffff10',
+        'scrollbarSlider.hoverBackground': '#ffffff20',
+        'scrollbarSlider.activeBackground': '#7c3aed40',
+        'minimap.background': '#060609',
+        'editorGutter.background': '#080810',
+      },
+    });
+
+    monaco.editor.setTheme('pcp-dark');
+
+    // Keyboard shortcuts
+    editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS, () => {
+      createSnapshot();
+    });
+
+    editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.Enter, () => {
+      execute();
+    });
+
+    // Focus the editor
+    editor.focus();
   };
 
-  const handleEditorChange = (value: string | undefined) => setCode(value || "");
+  // Code change handler
+  const handleCodeChange = useCallback(
+    (value: string | undefined) => {
+      const newCode = value ?? '';
+      setCode(newCode);
+      broadcastCode(newCode);
+      sendTypingIndicator(true);
+    },
+    [setCode, broadcastCode, sendTypingIndicator]
+  );
 
-  const copyRoomLink = () => roomId && navigator.clipboard.writeText(window.location.href);
-  const saveCode = () => alert("Save functionality not implemented.");
-  const exportCode = () => {
-    const blob = new Blob([code], { type: "text/plain" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "code.txt";
-    a.click();
-    URL.revokeObjectURL(url);
-  };
+  // Keyboard shortcut: toggle right sidebar
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'B') {
+        e.preventDefault();
+        setIsRightSidebarOpen(!isRightSidebarOpen);
+      }
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [isRightSidebarOpen, setIsRightSidebarOpen]);
 
   return (
-    <div className="min-h-screen flex flex-col bg-gradient-to-br from-[#0f0c29] via-[#302b63] to-[#24243e] transition-colors duration-700">
+    <div className="h-screen w-screen flex flex-col bg-[#080810] overflow-hidden">
       {/* Navbar */}
-      <header className="h-16 border-b border-[#64ffda]/40 bg-[#0f0c29]/90 px-6 flex items-center justify-between shadow-lg backdrop-blur-md">
-        <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2">
-            <Code2 className="w-7 h-7 text-[#64ffda] drop-shadow-xl" />
-            <span className="font-bold text-lg text-[#e6f1ff] tracking-wide">CodeCollab</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <Badge variant="secondary" className="font-mono bg-[#302b63]/70 text-[#64ffda] border border-[#64ffda]">
-              Room: {roomId}
-            </Badge>
-            <Button variant="ghost" size="sm" onClick={copyRoomLink} className="hover:bg-[#64ffda]/30 transition">
-              <Copy className="w-4 h-4 text-[#e6f1ff]" />
-            </Button>
-          </div>
-        </div>
-        <div className="flex items-center gap-2">
-          <select
-            value={language}
-            onChange={(e) => setLanguage(Number(e.target.value))}
-            className="rounded px-3 py-1 bg-[#1f1b38] text-[#64ffda] border border-[#64ffda] focus:outline-none focus:ring-2 focus:ring-[#64ffda] transition font-semibold shadow-md"
-            style={{ minWidth: 170 }}
+      <EditorNavbar
+        roomId={safeRoomId}
+        onRun={execute}
+        onSave={() => createSnapshot()}
+        isConnected={isBackendOnline}
+      />
+
+      {/* Main layout */}
+      <div className="flex flex-1 overflow-hidden">
+        {/* Left sidebar */}
+        <LeftSidebar />
+
+        {/* Center: Editor + bottom console */}
+        <div className="flex-1 flex flex-col overflow-hidden min-w-0">
+          {/* Interview panel (conditionally shown) */}
+          <InterviewPanel />
+
+          {/* Monaco Editor */}
+          <motion.div
+            className="flex-1 overflow-hidden"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.4, delay: 0.2 }}
           >
-            <option value={63}>JavaScript (Node.js)</option>
-            <option value={71}>Python (3.8.1)</option>
-            <option value={62}>Java (OpenJDK)</option>
-            <option value={54}>C++ (GCC)</option>
-          </select>
-
-          <Button variant="default" size="sm" onClick={runCode} disabled={running} className="bg-[#64ffda] text-[#0f0c29] hover:bg-[#00fff0] shadow-lg transition">
-            <Play className="w-4 h-4 mr-1" /> {running ? "Running..." : "Run"}
-          </Button>
-
-          <Button variant="ghost" size="sm" onClick={toggleTheme} className="hover:bg-[#64ffda]/30 transition">
-            {theme === "dark" ? <Sun className="w-4 h-4 text-[#e6f1ff]" /> : <Moon className="w-4 h-4 text-[#e6f1ff]" />}
-          </Button>
-          <Button variant="ghost" size="sm" onClick={saveCode} className="hover:bg-[#64ffda]/30 transition">
-            <Save className="w-4 h-4 text-[#e6f1ff]" /> <span className="text-[#e6f1ff]">Save</span>
-          </Button>
-          <Button variant="ghost" size="sm" onClick={exportCode} className="hover:bg-[#64ffda]/30 transition">
-            <Download className="w-4 h-4 text-[#e6f1ff]" /> <span className="text-[#e6f1ff]">Export</span>
-          </Button>
-        </div>
-      </header>
-
-      {/* Main */}
-      <div className="flex-1 flex flex-row gap-6 p-6">
-        {/* Code Editor and Output */}
-        <div className="flex-1 flex flex-col gap-4">
-          <div className="rounded-2xl shadow-2xl bg-[#1f1b38]/90 border border-[#64ffda] overflow-hidden flex-1 flex flex-col">
-            <Editor
-              height="400px"
-              language={languageMap[language] || "plaintext"}
-              value={code}
-              onChange={handleEditorChange}
-              theme="vs-dark"
-              options={{ fontSize: 16, minimap: { enabled: true }, fontFamily: "Fira Mono, monospace", smoothScrolling: true }}
+            <MonacoEditor
+              height="100%"
+              language={language.monacoLang}
+              defaultValue={code}
+              onChange={handleCodeChange}
+              onMount={handleEditorMount}
+              options={{
+                fontSize,
+                fontFamily: '"Fira Code", "Cascadia Code", "JetBrains Mono", "Roboto Mono", monospace',
+                fontLigatures: true,
+                minimap: { enabled: minimap },
+                wordWrap: wordWrap ? 'on' : 'off',
+                lineNumbers: 'on',
+                renderLineHighlight: 'gutter',
+                scrollBeyondLastLine: false,
+                padding: { top: 16, bottom: 16 },
+                smoothScrolling: true,
+                cursorBlinking: 'phase',
+                cursorSmoothCaretAnimation: 'on',
+                bracketPairColorization: { enabled: true },
+                suggest: {
+                  showKeywords: true,
+                  showSnippets: true,
+                  showWords: true,
+                  preview: true,
+                },
+                inlineSuggest: { enabled: true },
+                tabSize: 2,
+                insertSpaces: true,
+                formatOnPaste: true,
+                formatOnType: true,
+                autoIndent: 'advanced',
+                quickSuggestions: { other: true, comments: false, strings: false },
+                parameterHints: { enabled: true },
+                contextmenu: true,
+                mouseWheelZoom: true,
+                occurrencesHighlight: 'singleFile',
+                selectionHighlight: true,
+                codeLens: false,
+                folding: true,
+                foldingHighlight: true,
+                showFoldingControls: 'mouseover',
+                renderWhitespace: 'selection',
+                guides: {
+                  indentation: true,
+                  bracketPairs: true,
+                },
+                stickyScroll: { enabled: true },
+                glyphMargin: false,
+              }}
             />
-          </div>
+          </motion.div>
 
-          <div className="rounded-xl shadow-xl bg-[#302b63]/80 border border-[#64ffda] p-3">
-            <label className="block font-semibold mb-1 text-[#64ffda]" htmlFor="stdin-input">
-              Optional Input (stdin):
-            </label>
-            <textarea
-              id="stdin-input"
-              className="w-full rounded border border-[#64ffda] p-2 bg-[#1f1b38] text-[#e6f1ff] focus:ring-2 focus:ring-[#64ffda] transition shadow-inner"
-              rows={3}
-              placeholder="Enter input for your program here..."
-              value={stdin}
-              onChange={e => setStdin(e.target.value)}
-            />
-          </div>
-
-          <div className="rounded-xl shadow-2xl bg-[#1f1b38]/90 border border-[#64ffda] p-3 h-48 overflow-auto font-mono text-sm text-[#e6f1ff]">
-            <strong className="text-[#64ffda]">Output:</strong>
-            <pre className="whitespace-pre-wrap">{output}</pre>
-          </div>
+          {/* Output console */}
+          <OutputConsole />
         </div>
 
-        {/* Right Sidebar */}
-        <Card className="w-80 m-0 rounded-2xl border-l-0 border-t-0 border-b-0 bg-[#302b63]/80 shadow-2xl backdrop-blur-md p-4">
-          {/* Sidebar content (chat, participants, etc.) */}
-        </Card>
+        {/* Right sidebar */}
+        <RightSidebar onSendMessage={sendChatMessage} />
       </div>
     </div>
   );

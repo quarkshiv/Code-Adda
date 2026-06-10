@@ -1,3 +1,5 @@
+import { supabase } from '../services/supabaseClient';
+
 // Add a participant
 export async function addParticipant(roomId, participantName) {
   const { data, error } = await supabase

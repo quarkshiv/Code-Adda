@@ -1,208 +1,280 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Fira+Code:wght@300;400;500;600&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-/* VS Code-style collaborative editor design system */
-
+/* ── Design Tokens ─────────────────────────────────────────────── */
 @layer base {
   :root {
-    /* Light theme - clean and minimal */
-    --background: 0 0% 100%;
-    --foreground: 220 14% 11%;
-    
-    --card: 0 0% 100%;
-    --card-foreground: 220 14% 11%;
-    
-    --popover: 0 0% 100%;
-    --popover-foreground: 220 14% 11%;
-    
-    --primary: 217 91% 60%;
+    --background: 240 13% 7%;
+    --foreground: 220 14% 93%;
+    --card: 240 13% 9%;
+    --card-foreground: 220 14% 93%;
+    --popover: 240 13% 9%;
+    --popover-foreground: 220 14% 93%;
+    --primary: 270 80% 60%;
     --primary-foreground: 0 0% 100%;
-    
-    --secondary: 220 14% 96%;
-    --secondary-foreground: 220 14% 11%;
-    
-    --muted: 220 14% 96%;
-    --muted-foreground: 220 14% 46%;
-    
-    --accent: 217 91% 60%;
+    --secondary: 240 13% 15%;
+    --secondary-foreground: 220 14% 93%;
+    --muted: 240 13% 15%;
+    --muted-foreground: 220 14% 55%;
+    --accent: 262 80% 60%;
     --accent-foreground: 0 0% 100%;
-    
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
-    
-    --border: 220 13% 91%;
-    --input: 220 13% 91%;
-    --ring: 217 91% 60%;
-    
+    --border: 240 13% 15%;
+    --input: 240 13% 15%;
+    --ring: 270 80% 60%;
     --radius: 0.75rem;
-    
-    /* Custom design tokens */
-    --editor-background: 0 0% 100%;
-    --editor-foreground: 220 14% 11%;
-    --sidebar-background: 220 14% 98%;
-    --navbar-background: 0 0% 100%;
-    
-    /* Gradients - Darker and cooler */
-    --gradient-hero: linear-gradient(135deg, hsl(240 84% 12%) 0%, hsl(260 84% 20%) 25%, hsl(280 90% 25%) 50%, hsl(240 84% 15%) 75%, hsl(220 84% 8%) 100%);
-    --gradient-card: linear-gradient(135deg, hsl(0 0% 100%) 0%, hsl(220 14% 98%) 100%);
-    --gradient-overlay: linear-gradient(180deg, hsl(240 84% 4% / 0.8) 0%, hsl(240 84% 8% / 0.9) 100%);
-    
-    /* Shadows - Enhanced for cooler look */
-    --shadow-soft: 0 2px 8px hsl(240 84% 4% / 0.1);
-    --shadow-medium: 0 4px 16px hsl(240 84% 4% / 0.15);
-    --shadow-large: 0 8px 32px hsl(240 84% 4% / 0.25);
-    --shadow-glow: 0 0 40px hsl(280 90% 50% / 0.3);
-    
-    /* Animations */
-    --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    --transition-spring: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 
-    --sidebar-background: 0 0% 98%;
+    /* Sidebar tokens */
+    --sidebar-background: 240 13% 9%;
+    --sidebar-foreground: 240 4.8% 85%;
+    --sidebar-primary: 270 80% 60%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 240 13% 15%;
+    --sidebar-accent-foreground: 240 4.8% 85%;
+    --sidebar-border: 240 13% 15%;
+    --sidebar-ring: 270 80% 60%;
 
-    --sidebar-foreground: 240 5.3% 26.1%;
-
-    --sidebar-primary: 240 5.9% 10%;
-
-    --sidebar-primary-foreground: 0 0% 98%;
-
-    --sidebar-accent: 240 4.8% 95.9%;
-
-    --sidebar-accent-foreground: 240 5.9% 10%;
-
-    --sidebar-border: 220 13% 91%;
-
-    --sidebar-ring: 217.2 91.2% 59.8%;
+    /* Editor tokens */
+    --editor-background: 240 50% 4%;
+    --editor-foreground: 220 14% 93%;
+    --navbar-background: 240 13% 5%;
   }
 
   .dark {
-    /* Dark theme - VS Code inspired */
-    --background: 220 13% 7%;
+    --background: 240 13% 7%;
     --foreground: 220 14% 93%;
-    
-    --card: 220 13% 9%;
+    --card: 240 13% 9%;
     --card-foreground: 220 14% 93%;
-    
-    --popover: 220 13% 9%;
+    --popover: 240 13% 9%;
     --popover-foreground: 220 14% 93%;
-    
-    --primary: 217 91% 60%;
-    --primary-foreground: 220 13% 7%;
-    
-    --secondary: 220 13% 15%;
+    --primary: 270 80% 60%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 240 13% 15%;
     --secondary-foreground: 220 14% 93%;
-    
-    --muted: 220 13% 15%;
-    --muted-foreground: 220 14% 63%;
-    
-    --accent: 217 91% 60%;
-    --accent-foreground: 220 13% 7%;
-    
+    --muted: 240 13% 15%;
+    --muted-foreground: 220 14% 55%;
+    --accent: 262 80% 60%;
+    --accent-foreground: 0 0% 100%;
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
-    
-    --border: 220 13% 15%;
-    --input: 220 13% 15%;
-    --ring: 217 91% 60%;
-    
-    /* Dark theme custom tokens */
-    --editor-background: 220 13% 7%;
-    --editor-foreground: 220 14% 93%;
-    --sidebar-background: 220 13% 9%;
-    --navbar-background: 220 13% 9%;
-    
-    /* Dark gradients - Even cooler */
-    --gradient-hero: linear-gradient(135deg, hsl(240 84% 12%) 0%, hsl(260 84% 20%) 25%, hsl(280 90% 25%) 50%, hsl(240 84% 15%) 75%, hsl(220 84% 8%) 100%);
-    --gradient-card: linear-gradient(135deg, hsl(220 13% 9%) 0%, hsl(220 13% 11%) 100%);
-    --gradient-overlay: linear-gradient(180deg, hsl(240 84% 2% / 0.9) 0%, hsl(240 84% 6% / 0.95) 100%);
-    
-    /* Dark shadows - Enhanced glow effects */
-    --shadow-soft: 0 2px 8px hsl(220 13% 0% / 0.3);
-    --shadow-medium: 0 4px 16px hsl(220 13% 0% / 0.4);
-    --shadow-large: 0 8px 32px hsl(220 13% 0% / 0.5);
-    --shadow-glow: 0 0 60px hsl(280 90% 70% / 0.4);
-    --sidebar-background: 240 5.9% 10%;
-    --sidebar-foreground: 240 4.8% 95.9%;
-    --sidebar-primary: 224.3 76.3% 48%;
+    --border: 240 13% 15%;
+    --input: 240 13% 15%;
+    --ring: 270 80% 60%;
+    --sidebar-background: 240 13% 9%;
+    --sidebar-foreground: 240 4.8% 85%;
+    --sidebar-primary: 270 80% 60%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 240 3.7% 15.9%;
-    --sidebar-accent-foreground: 240 4.8% 95.9%;
-    --sidebar-border: 240 3.7% 15.9%;
-    --sidebar-ring: 217.2 91.2% 59.8%;
+    --sidebar-accent: 240 13% 15%;
+    --sidebar-accent-foreground: 240 4.8% 85%;
+    --sidebar-border: 240 13% 15%;
+    --sidebar-ring: 270 80% 60%;
   }
 }
 
+/* ── Base Styles ───────────────────────────────────────────────── */
 @layer base {
   * {
     @apply border-border;
+    box-sizing: border-box;
+  }
+
+  html {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    color-scheme: dark;
   }
 
   body {
-    @apply bg-background text-foreground font-sans;
-    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', sans-serif;
+    @apply bg-background text-foreground;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    overflow: hidden;
   }
-  
-  .font-mono {
-    font-family: 'Fira Code', 'SF Mono', Monaco, 'Inconsolata', 'Roboto Mono', 'Source Code Pro', monospace;
+
+  .font-mono,
+  code,
+  pre {
+    font-family: 'Fira Code', 'Cascadia Code', 'JetBrains Mono', 'SF Mono', Monaco, monospace;
+    font-feature-settings: 'liga' 1, 'calt' 1;
   }
-  
-  .gradient-hero {
-    background: var(--gradient-hero);
+}
+
+/* ── Scrollbars ────────────────────────────────────────────────── */
+::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 2px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(168, 85, 247, 0.4);
+}
+
+.scrollbar-thin {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.08) transparent;
+}
+
+/* ── Glassmorphism utilities ───────────────────────────────────── */
+@layer utilities {
+  .glass {
+    background: rgba(255, 255, 255, 0.04);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.08);
   }
-  
-  .gradient-card {
-    background: var(--gradient-card);
+
+  .glass-strong {
+    background: rgba(255, 255, 255, 0.07);
+    backdrop-filter: blur(32px);
+    -webkit-backdrop-filter: blur(32px);
+    border: 1px solid rgba(255, 255, 255, 0.12);
   }
-  
-  .gradient-overlay {
-    background: var(--gradient-overlay);
+
+  .glass-hover {
+    transition: all 0.2s ease;
   }
-  
-  .shadow-soft {
-    box-shadow: var(--shadow-soft);
+
+  .glass-hover:hover {
+    background: rgba(255, 255, 255, 0.08);
+    border-color: rgba(168, 85, 247, 0.3);
+    box-shadow: 0 0 30px rgba(168, 85, 247, 0.1);
   }
-  
-  .shadow-medium {
-    box-shadow: var(--shadow-medium);
+
+  .glow-purple {
+    box-shadow: 0 0 40px rgba(168, 85, 247, 0.2), 0 0 80px rgba(168, 85, 247, 0.08);
   }
-  
-  .shadow-large {
-    box-shadow: var(--shadow-large);
+
+  .glow-blue {
+    box-shadow: 0 0 40px rgba(59, 130, 246, 0.2), 0 0 80px rgba(59, 130, 246, 0.08);
   }
-  
-  .shadow-glow {
-    box-shadow: var(--shadow-glow);
+
+  .glow-green {
+    box-shadow: 0 0 40px rgba(16, 185, 129, 0.2);
   }
-  
-  .transition-smooth {
-    transition: var(--transition-smooth);
+
+  .gradient-text-purple {
+    background: linear-gradient(135deg, #a855f7, #60a5fa);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
   }
-  
-  .transition-spring {
-    transition: var(--transition-spring);
-  }
-  
-  /* Cool animated background effects */
-  .hero-glow {
+
+  .gradient-border {
     position: relative;
+    background: clip-padding;
+    border: 1px solid transparent;
+    background-clip: padding-box;
   }
-  
-  .hero-glow::before {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background: radial-gradient(circle at 50% 50%, hsl(280 90% 50% / 0.15) 0%, transparent 70%);
-    animation: pulse-glow 4s ease-in-out infinite;
+
+  .animate-float {
+    animation: float 6s ease-in-out infinite;
   }
-  
-  @keyframes pulse-glow {
-    0%, 100% {
-      opacity: 0.5;
-      transform: scale(1);
-    }
-    50% {
-      opacity: 0.8;
-      transform: scale(1.05);
-    }
+
+  .animate-shimmer {
+    animation: shimmer 2s linear infinite;
+    background: linear-gradient(
+      90deg,
+      rgba(255, 255, 255, 0) 0%,
+      rgba(255, 255, 255, 0.05) 50%,
+      rgba(255, 255, 255, 0) 100%
+    );
+    background-size: 200% 100%;
   }
+}
+
+/* ── Animations ────────────────────────────────────────────────── */
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-8px); }
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+@keyframes pulse-ring {
+  0% { transform: scale(1); opacity: 0.8; }
+  100% { transform: scale(1.6); opacity: 0; }
+}
+
+@keyframes typing-dot {
+  0%, 60%, 100% { transform: translateY(0); }
+  30% { transform: translateY(-6px); }
+}
+
+@keyframes gradient-shift {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+/* ── Typing indicator ──────────────────────────────────────────── */
+.typing-dot {
+  display: inline-block;
+  animation: typing-dot 1.2s ease-in-out infinite;
+}
+.typing-dot:nth-child(2) { animation-delay: 0.2s; }
+.typing-dot:nth-child(3) { animation-delay: 0.4s; }
+
+/* ── Presence pulse ────────────────────────────────────────────── */
+.presence-pulse::after {
+  content: '';
+  position: absolute;
+  inset: -3px;
+  border-radius: 50%;
+  background: inherit;
+  animation: pulse-ring 1.5s ease-out infinite;
+}
+
+/* ── Monaco editor overrides ───────────────────────────────────── */
+.monaco-editor .overflow-guard {
+  border-radius: 0;
+}
+
+.monaco-editor .minimap {
+  border-left: 1px solid rgba(255, 255, 255, 0.05) !important;
+}
+
+/* ── Gradient animated backgrounds ────────────────────────────── */
+.bg-animated-gradient {
+  background: linear-gradient(
+    135deg,
+    #0d0d1a 0%,
+    #12082e 25%,
+    #0a1628 50%,
+    #120828 75%,
+    #0d0d1a 100%
+  );
+  background-size: 400% 400%;
+  animation: gradient-shift 12s ease infinite;
+}
+
+/* ── Radix UI select dark overrides ───────────────────────────── */
+[data-radix-select-content] {
+  background: #0d0d1a !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+}
+
+/* ── Input/select defaults ─────────────────────────────────────── */
+select option {
+  background: #0d0d1a;
+  color: #e2e8f0;
+}
+
+/* ── Landing page: overflow hidden only on editor ─────────────── */
+.landing-page body {
+  overflow: auto !important;
 }
