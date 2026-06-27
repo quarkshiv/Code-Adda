@@ -13,7 +13,12 @@ const MONGODB_URI = process.env.MONGODB_URI || '';
 
 // ── Middleware ─────────────────────────────────────────────────────
 app.use(cors({
-  origin: ['http://localhost:8080', 'http://localhost:3000', 'http://localhost:5173'],
+  origin: [
+    'http://localhost:8080',
+    'http://localhost:3000',
+    'http://localhost:5173',
+    'https://code-adda-fawn.vercel.app',
+  ],
   credentials: true,
 }));
 
