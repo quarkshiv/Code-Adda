@@ -459,7 +459,7 @@ This project is licensed under the **MIT License** — see the [LICENSE](LICENSE
     <td align="center">
       <strong>Shivansh Shukla</strong><br/>
       <a href="https://github.com/quarkshiv">GitHub</a> •
-      <a href="https://www.linkedin.com/in/shivansh-shukla-24a74027b/">LinkedIn</a> •
+      <a href="https://www.linkedin.com/in/shivansh-shukla-26807a356/">LinkedIn</a> •
       <a href="https://portfolio-phi-eight-30.vercel.app/">Portfolio</a>
     </td>
   </tr>
