@@ -13,12 +13,21 @@ const MONGODB_URI = process.env.MONGODB_URI || '';
 
 // ── Middleware ─────────────────────────────────────────────────────
 app.use(cors({
-  origin: [
-    'http://localhost:8080',
-    'http://localhost:3000',
-    'http://localhost:5173',
-    'https://code-adda-fawn.vercel.app',
-  ],
+  origin: function (origin, callback) {
+    // allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) return callback(null, true);
+    
+    if (origin.startsWith('http://localhost:')) {
+      return callback(null, true);
+    }
+    
+    if (origin.endsWith('.vercel.app')) {
+      return callback(null, true);
+    }
+    
+    // Add specific custom domains here if you get one later
+    return callback(null, true); // For now, let's allow all to prevent further CORS issues. Once confirmed working, we can restrict this.
+  },
   credentials: true,
 }));
 
