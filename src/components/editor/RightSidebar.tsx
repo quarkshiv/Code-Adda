@@ -164,7 +164,7 @@ const ChatPanel: React.FC<{
         </div>
       )}
       {messages.map((msg) => {
-        const user = users.find((u) => u.id === msg.userId);
+        const user = users.find((u) => u.name === msg.userName);
         return (
           <div key={msg.id} className="flex gap-2 group">
             <UserAvatar name={msg.userName} color={msg.userColor} size="xs" isOnline={!!user} />
@@ -174,8 +174,9 @@ const ChatPanel: React.FC<{
                   {msg.userName}
                 </span>
                 <span className="text-[10px] text-white/25">
-                  {msg.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                  {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                 </span>
+
               </div>
               <p className="text-sm text-white/75 break-words leading-relaxed">{msg.content}</p>
             </div>

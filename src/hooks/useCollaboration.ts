@@ -5,6 +5,7 @@ import {
   broadcastCodeChange, broadcastCursor, broadcastChatMessage, broadcastTyping,
   saveCodeToRoom, loadRoomCode,
 } from '@/services/realtimeService';
+import { apiSaveChatMessage } from '@/services/mongoApi';
 import { v4 as uuidv4 } from 'uuid';
 import type * as Monaco from 'monaco-editor';
 import { useAuth } from '@/contexts/AuthContext';
@@ -52,10 +53,11 @@ export function useCollaboration(roomId: string, editorRef?: React.RefObject<Mon
   const suppressBroadcast = useRef(false);
 
   const myColorIndex = parseInt(myUserId.charCodeAt(0).toString(), 10) % USER_COLORS.length;
+  const myColor = USER_COLORS[myColorIndex];
   const myUser: UserPresence = {
     id: myUserId,
     name: myUserName,
-    color: USER_COLORS[myColorIndex],
+    color: myColor,
     avatar: myAvatar,
   };
 
@@ -81,7 +83,18 @@ export function useCollaboration(roomId: string, editorRef?: React.RefObject<Mon
   }, [editorRef, setCode]);
 
   useEffect(() => {
-    setMyUser(myUser);
+    // Join realtime channel
+    // Presence tracks real user identity (name, avatar, color) for the People panel.
+    // TAB_SESSION_ID is used ONLY for broadcast dedup (so two tabs of the same user
+    // don't echo each other's code/chat).
+    const presenceUser: UserPresence = {
+      id: TAB_SESSION_ID,       // unique per tab — used as presence key
+      name: myUserName,
+      color: myColor,
+      avatar: myAvatar,
+    };
+
+    setMyUser(presenceUser);
 
     // Load existing code from DB
     loadRoomCode(roomId).then((data) => {
@@ -90,8 +103,7 @@ export function useCollaboration(roomId: string, editorRef?: React.RefObject<Mon
       }
     });
 
-    // Join realtime channel — use TAB_SESSION_ID for broadcast filtering
-    joinRoom(roomId, { ...myUser, id: TAB_SESSION_ID }, {
+    joinRoom(roomId, presenceUser, {
       onUsersChange: setUsers,
       onCodeChange: (remoteCode) => {
         applyRemoteCode(remoteCode);
@@ -108,7 +120,7 @@ export function useCollaboration(roomId: string, editorRef?: React.RefObject<Mon
       if (mongoSaveTimer.current) clearTimeout(mongoSaveTimer.current);
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [roomId, myUserId]);
+  }, [roomId]);
 
   // Broadcast code changes — NO debounce for real-time feel
   const broadcastCode = useCallback(
@@ -128,18 +140,26 @@ export function useCollaboration(roomId: string, editorRef?: React.RefObject<Mon
     (content: string) => {
       const msg: ChatMessage = {
         id: uuidv4(),
-        userId: TAB_SESSION_ID,
+        userId: myUserId,
         userName: myUserName,
-        userColor: myUser.color,
+        userColor: myColor,
         content,
         timestamp: new Date(),
       };
       // Add locally immediately (so sender sees it instantly)
       addMessage(msg);
-      // Broadcast to other users
-      broadcastChatMessage(msg);
+      // Broadcast to other users via Supabase Realtime
+      // TAB_SESSION_ID is sent as tabId for dedup (so receiver can skip own echoes)
+      broadcastChatMessage(msg, TAB_SESSION_ID);
+      // Persist to MongoDB for chat history
+      apiSaveChatMessage(roomId, {
+        userId: myUserId,
+        userName: myUserName,
+        userColor: myColor,
+        content,
+      });
     },
-    [myUserName, myUser.color, addMessage]
+    [myUserName, myColor, myUserId, roomId, addMessage]
   );
 
   const sendTypingIndicator = useCallback((isTyping: boolean) => {

@@ -154,4 +154,85 @@ router.post('/:id/snapshots', async (req, res) => {
   }
 });
 
+// ── In-memory Presence Tracking ──────────────────────────────────
+// Supabase Realtime presence is unreliable, so we track active users
+// server-side via heartbeats. Users who stop heartbeating are pruned.
+
+interface PresenceEntry {
+  id: string;
+  name: string;
+  color: string;
+  avatar?: string;
+  lastSeen: number;
+}
+
+const roomPresence = new Map<string, Map<string, PresenceEntry>>();
+const PRESENCE_TIMEOUT_MS = 15_000; // 15 seconds
+
+function pruneStale(roomId: string) {
+  const room = roomPresence.get(roomId);
+  if (!room) return;
+  const now = Date.now();
+  for (const [userId, entry] of room.entries()) {
+    if (now - entry.lastSeen > PRESENCE_TIMEOUT_MS) {
+      room.delete(userId);
+    }
+  }
+  if (room.size === 0) roomPresence.delete(roomId);
+}
+
+// POST /api/rooms/:id/presence — heartbeat (called every 5s by each client)
+router.post('/:id/presence', (req, res) => {
+  try {
+    const { userId, userName, userColor, avatar } = req.body as {
+      userId: string; userName: string; userColor: string; avatar?: string;
+    };
+    if (!userId || !userName) {
+      return res.status(400).json({ success: false, error: 'userId and userName are required' });
+    }
+
+    const roomId = req.params.id;
+    if (!roomPresence.has(roomId)) {
+      roomPresence.set(roomId, new Map());
+    }
+    roomPresence.get(roomId)!.set(userId, {
+      id: userId,
+      name: userName,
+      color: userColor || '#A855F7',
+      avatar,
+      lastSeen: Date.now(),
+    });
+
+    pruneStale(roomId);
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ success: false, error: (err as Error).message });
+  }
+});
+
+// GET /api/rooms/:id/presence — get all active users in a room
+router.get('/:id/presence', (req, res) => {
+  try {
+    const roomId = req.params.id;
+    pruneStale(roomId);
+    const room = roomPresence.get(roomId);
+    const users = room ? Array.from(room.values()).map(({ id, name, color, avatar }) => ({ id, name, color, avatar })) : [];
+    res.json({ success: true, users });
+  } catch (err) {
+    res.status(500).json({ success: false, error: (err as Error).message });
+  }
+});
+
+// DELETE /api/rooms/:id/presence — user leaving
+router.delete('/:id/presence', (req, res) => {
+  try {
+    const { userId } = req.body as { userId: string };
+    const room = roomPresence.get(req.params.id);
+    if (room) room.delete(userId);
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ success: false, error: (err as Error).message });
+  }
+});
+
 export default router;

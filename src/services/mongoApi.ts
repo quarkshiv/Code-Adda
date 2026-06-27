@@ -197,3 +197,51 @@ export async function apiCheckHealth(): Promise<boolean> {
     return false;
   }
 }
+
+// ── Presence (server-side user tracking) ──────────────────────────
+
+export interface PresenceUser {
+  id: string;
+  name: string;
+  color: string;
+  avatar?: string;
+}
+
+/** Send a heartbeat so the server knows we're still active */
+export async function apiHeartbeat(
+  roomId: string,
+  user: { userId: string; userName: string; userColor: string; avatar?: string }
+) {
+  try {
+    await apiRequest(`/rooms/${roomId}/presence`, {
+      method: 'POST',
+      body: JSON.stringify(user),
+    });
+  } catch {
+    // silent
+  }
+}
+
+/** Get all active users in a room */
+export async function apiGetActiveUsers(roomId: string): Promise<PresenceUser[]> {
+  try {
+    const data = await apiRequest<{ success: boolean; users: PresenceUser[] }>(
+      `/rooms/${roomId}/presence`
+    );
+    return data.users;
+  } catch {
+    return [];
+  }
+}
+
+/** Tell the server we're leaving */
+export async function apiLeavePresence(roomId: string, userId: string) {
+  try {
+    await apiRequest(`/rooms/${roomId}/presence`, {
+      method: 'DELETE',
+      body: JSON.stringify({ userId }),
+    });
+  } catch {
+    // silent
+  }
+}

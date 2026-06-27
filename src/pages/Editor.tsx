@@ -10,7 +10,7 @@ import { useCodeExecution } from '@/hooks/useCodeExecution';
 import { useVersionHistory } from '@/hooks/useVersionHistory';
 import {
   apiGetRoom, apiGetChatHistory, apiGetSnapshots,
-  apiCheckHealth,
+  apiCheckHealth, apiHeartbeat, apiGetActiveUsers, apiLeavePresence,
 } from '@/services/mongoApi';
 
 import { EditorNavbar } from '@/components/editor/EditorNavbar';
@@ -27,7 +27,7 @@ const EditorPage: React.FC = () => {
     code, setCode, setLanguage,
     language, fontSize, minimap, wordWrap,
     isRightSidebarOpen, setIsRightSidebarOpen,
-    addMessage, addSnapshot, myUser,
+    addMessage, addSnapshot, myUser, setUsers,
   } = useEditorStore();
 
   const editorRef = useRef<Monaco.editor.IStandaloneCodeEditor | null>(null);
@@ -88,7 +88,82 @@ const EditorPage: React.FC = () => {
     };
 
     initRoom();
-    return () => { isMounted = false; };
+
+    // ── Poll for new chat messages every 3s (fallback for Supabase Realtime) ──
+    const pollChat = setInterval(async () => {
+      if (!isMounted) return;
+      try {
+        const msgs = await apiGetChatHistory(safeRoomId);
+        msgs.forEach((msg) =>
+          addMessage({
+            id: msg._id,
+            userId: msg.userId,
+            userName: msg.userName,
+            userColor: msg.userColor,
+            content: msg.content,
+            timestamp: new Date(msg.createdAt),
+          })
+        );
+      } catch {
+        // silent — don't break the editor if backend is down
+      }
+    }, 3000);
+
+    // ── Server-side presence: heartbeat + poll ──
+    // Send heartbeat immediately, then every 5s
+    const sendHeartbeat = () => {
+      const u = useEditorStore.getState().myUser;
+      if (u) {
+        apiHeartbeat(safeRoomId, {
+          userId: u.id,
+          userName: u.name,
+          userColor: u.color,
+          avatar: u.avatar,
+        });
+      }
+    };
+    sendHeartbeat();
+    const heartbeatInterval = setInterval(sendHeartbeat, 5000);
+
+    // Poll active users every 3s
+    const pollPresence = setInterval(async () => {
+      if (!isMounted) return;
+      try {
+        const users = await apiGetActiveUsers(safeRoomId);
+        setUsers(users.map((u) => ({
+          id: u.id,
+          name: u.name,
+          color: u.color,
+          avatar: u.avatar,
+        })));
+      } catch {
+        // silent
+      }
+    }, 3000);
+
+    // Notify server when tab closes
+    const handleUnload = () => {
+      const u = useEditorStore.getState().myUser;
+      if (u) {
+        // sendBeacon is fire-and-forget, works during unload
+        navigator.sendBeacon(
+          `${import.meta.env.VITE_API_URL || 'http://localhost:5000/api'}/rooms/${safeRoomId}/presence`,
+          new Blob([JSON.stringify({ userId: u.id, _method: 'DELETE' })], { type: 'application/json' })
+        );
+      }
+    };
+    window.addEventListener('beforeunload', handleUnload);
+
+    return () => {
+      isMounted = false;
+      clearInterval(pollChat);
+      clearInterval(heartbeatInterval);
+      clearInterval(pollPresence);
+      window.removeEventListener('beforeunload', handleUnload);
+      // Actively leave on cleanup
+      const u = useEditorStore.getState().myUser;
+      if (u) apiLeavePresence(safeRoomId, u.id);
+    };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [safeRoomId]);
 

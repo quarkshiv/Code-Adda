@@ -266,7 +266,11 @@ export const useEditorStore = create<EditorState>((set) => ({
   setIsRunning: (isRunning) => set({ isRunning }),
   setUsers: (users) => set({ users }),
   setMyUser: (myUser) => set({ myUser }),
-  addMessage: (msg) => set((s) => ({ messages: [...s.messages, msg] })),
+  addMessage: (msg) => set((s) => {
+    // Prevent duplicate messages (realtime + history load can overlap)
+    if (s.messages.some((m) => m.id === msg.id)) return s;
+    return { messages: [...s.messages, msg] };
+  }),
   addSnapshot: (snap) => set((s) => ({ snapshots: [snap, ...s.snapshots] })),
   restoreSnapshot: (snap) => set({ code: snap.code, language: LANGUAGES.find(l => l.id === snap.language) || LANGUAGES[0] }),
   setActivePanel: (activePanel) => set({ activePanel }),
